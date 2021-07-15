@@ -30,7 +30,7 @@ class Spbstu(UniversityTemplate):
                 )
             ))):
                 self.groups[group.id] = group
-
+        """
         # :TODO REMOVE THIS
         i = 0
         buff = dict()
@@ -40,7 +40,7 @@ class Spbstu(UniversityTemplate):
             i += 1
             buff[key] = value
         self.groups = buff
-        # :TODO REMOVE THIS
+        # :TODO REMOVE THIS"""
 
     @benchmark('set teachers (includes set schedule)')
     def _set_teachers(self) -> None:
@@ -83,10 +83,10 @@ class Spbstu(UniversityTemplate):
             if lesson['lesson']['groups'] is not None:
                 for group in lesson['lesson']['groups']:
 
-                    # :TODO REMOVE THIS
+                    """# :TODO REMOVE THIS
                     if group['id'] not in self.groups.keys():
                         self.groups[group['id']] = Group(group['id'], 'name', 'faculty', 'edu_type', 1)
-                    # :TODO REMOVE THIS
+                    # :TODO REMOVE THIS"""
 
                     groups.append(self.groups[group['id']])
             if lesson['lesson']['teachers'] is not None:
