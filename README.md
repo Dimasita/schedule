@@ -1,12 +1,21 @@
 # Schedule   
+docker build . -t image_name  
+docker run -i --rm \
+                    -v `pwd`/NAME_OUTPUT_FILE.JSON:/app/output.json \  
+                    -v `pwd`/NAME_INPUT_FILE.JSON:/app/input.json \  
+                    -e univer=UNIVER_NAME image_name  
+<br>
 Если есть входной файл, из него берутся все имеющиеся в нем поля из списка:   
 - groups   
 - teachers  
 - subjects  
 
-Обязательный и единственный параметр на вход - название универа.
+Если входной файл не нужен, то убрать его привязку где run.  
+Обязательная переменная univer - название универа.
 1. Политех = spbstu  
   Будет дополняться (наверно))
    
-Пример:  
-   python import.py < input.json > output.json spbstu  
+Пример с входным файлом:  
+docker run -i --rm -v `pwd`/output.json:/app/output.json -v `pwd`/input.json:/app/input.json -e univer=sbpstu image_name  
+Без входного файла:  
+docker run -i --rm -v `pwd`/output.json:/app/output.json -e univer=sbpstu image_name  
