@@ -20,7 +20,7 @@ class UniversityTemplate:
         self._set_lessons()
 
     def set_values_from_file(self, data: json) -> None:
-        if 'groups' not in data.keys() or data['groups'] is None or len(data['teachers']) == 0:
+        if 'groups' not in data.keys() or data['groups'] is None or len(data['groups']) == 0:
             self._set_groups()
         else:
             for g in data['groups']:

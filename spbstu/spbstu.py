@@ -8,7 +8,7 @@ from models.group import Group
 from models.lesson import Lesson
 from models.subject import Subject
 from models.teacher import Teacher
-from models.unversity_tamplate import UniversityTemplate
+from models.unversity_template import UniversityTemplate
 from services.decorators import benchmark
 from services.exceptions import ExternalError
 from services.helper import get_json, get_page
