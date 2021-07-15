@@ -16,6 +16,6 @@ docker run -i --rm \
   Будет дополняться (наверно))
    
 Пример с входным файлом:  
-docker run -i --rm -v `pwd`/output.json:/app/output.json -v `pwd`/input.json:/app/input.json -e univer=sbpstu image_name  
+docker run -i --rm -v `pwd`/output.json:/app/output.json -v `pwd`/input.json:/app/input.json -e univer=spbstu image_name  
 Без входного файла:  
-docker run -i --rm -v `pwd`/output.json:/app/output.json -e univer=sbpstu image_name  
+docker run -i --rm -v `pwd`/output.json:/app/output.json -e univer=spbstu image_name  
