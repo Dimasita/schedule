@@ -19,4 +19,4 @@ if __name__ == '__main__':
     else:
         university.set_default_values()
 
-    json.dump(university.get_values(), sys.stdout)
+    json.dump(university.get_values(), sys.stdout, ensure_ascii=False)
