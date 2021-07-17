@@ -205,4 +205,3 @@ class Spbstu(UniversityTemplate):
         if hours not in table.keys():
             return 0
         return table[hours]
-
