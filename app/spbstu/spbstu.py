@@ -21,16 +21,40 @@ class Spbstu(UniversityTemplate):
     @benchmark('set groups')
     def _set_groups(self) -> None:
         faculties = self._get_faculties()
-        for f in faculties:
-            for group in (list(map(
-                lambda g: Group(g['id'], g['name'], f['name'], g['type'], g['level']),
-                self._parse_groups_to_list(
-                    self._get_groups_from_page(
-                        get_page(LINKS['BASE'] + f['link'], 'GET')
-                    )
-                )
-            ))):
-                self.groups[group.id] = group
+        loop = asyncio.get_event_loop()
+        loop.run_until_complete(self._set_events_to_get_groups(faculties))
+
+    async def _set_events_to_get_groups(self, faculties: []) -> None:
+        await asyncio.wait([
+            asyncio.create_task(self._extend_groups(faculty))
+            for faculty in faculties
+        ])
+
+    async def _extend_groups(self, faculty):
+        page = await self._get_groups_from_page(faculty)
+        for group in (list(map(
+                lambda g: Group(g['id'], g['name'], faculty['name'], g['type'], g['level']),
+                self._parse_groups_to_list(page)
+        ))):
+            self.groups[group.id] = group
+
+    @staticmethod
+    async def _get_groups_from_page(faculty) -> BeautifulSoup:
+        soup = await get_page_async(LINKS['BASE'] + faculty['link'], 'GET')
+        return soup
+
+    @staticmethod
+    def _parse_groups_page_to_string(soup: BeautifulSoup) -> str:
+        res = soup.find_all('script')
+        for r in res:
+            if r.string is not None and len(r.attrs) == 0:
+                return r.string
+
+    def _parse_groups_to_list(self, page: BeautifulSoup) -> [{str, str}]:
+        groups = self._parse_groups_page_to_string(page)
+        pattern = re.compile(r'"id":(?P<id>\d+),"name":"(?P<name>\w+/\w+)",'
+                             r'"level":(?P<level>\d+),"type":"(?P<type>\w+)"')
+        return [m.groupdict() for m in pattern.finditer(groups)]
 
     @benchmark('set teachers (includes set schedule)')
     def _set_teachers(self) -> None:
@@ -155,19 +179,6 @@ class Spbstu(UniversityTemplate):
         soup = get_page(LINKS['BASE'])
         faculties = soup.find_all('a', class_='faculty-list__link')
         return [{'link': f.get('href'), 'name': f.text} for f in faculties]
-
-    @staticmethod
-    def _get_groups_from_page(soup: BeautifulSoup) -> str:
-        res = soup.find_all('script')
-        for r in res:
-            if r.string is not None and len(r.attrs) == 0:
-                return r.string
-
-    @staticmethod
-    def _parse_groups_to_list(groups: str) -> [{str, str}]:
-        pattern = re.compile(r'"id":(?P<id>\d+),"name":"(?P<name>\w+/\w+)",'
-                             r'"level":(?P<level>\d+),"type":"(?P<type>\w+)"')
-        return [m.groupdict() for m in pattern.finditer(groups)]
 
     @staticmethod
     def _calculate_lesson_number(start_time: time, end_time: time) -> int:
