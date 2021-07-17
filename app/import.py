@@ -2,10 +2,14 @@ import json
 import sys
 from json import JSONDecodeError
 
+from bstu.bstu import Bstu
+from etu.etu import Etu
 from spbstu.spbstu import Spbstu
 
 UNIVERSITIES = {
-    'spbstu': Spbstu
+    'spbstu': Spbstu,
+    'etu': Etu,
+    'bstu': Bstu
 }
 
 if __name__ == '__main__':

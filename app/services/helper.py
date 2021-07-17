@@ -7,15 +7,12 @@ from bs4 import BeautifulSoup
 from services.exceptions import ExternalError
 
 
-def humanize_weekday(weekday: int) -> str:
+def humanize_weekday(weekday) -> str:
+    if type(weekday) == str:
+        weekday = weekday.lower()
     days = {
-        1: 'пн',
-        2: 'вт',
-        3: 'ср',
-        4: 'чт',
-        5: 'пт',
-        6: 'сб',
-        7: 'вс'
+        1: 'пн', 2: 'вт', 3: 'ср', 4: 'чт', 5: 'пт', 6: 'сб', 7: 'вс',
+        'mon': 'пн', 'tue': 'вт', 'wed': 'ср', 'thu': 'чт', 'fri': 'пт', 'sat': 'сб', 'sun': 'вс'
     }
     return days[weekday]
 
@@ -61,5 +58,5 @@ def _make_request(link: str, method: str = 'POST', **kwargs) -> requests:
     else:
         response = requests.get(link, params={**kwargs})
     if response.status_code != 200:
-        raise ExternalError(f'Description {response.status_code}\n{link}')
+        raise ExternalError(f'Request error, code: {response.status_code}, method: {method}\n{link}\n{kwargs}')
     return response
