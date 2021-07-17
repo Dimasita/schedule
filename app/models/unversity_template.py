@@ -4,6 +4,7 @@ from models.group import Group
 from models.subject import Subject
 from models.teacher import Teacher
 from models.lesson import Lesson
+from services.decorators import benchmark
 
 
 class UniversityTemplate:
@@ -13,6 +14,7 @@ class UniversityTemplate:
     schedule: [] = list()
     lessons: [Lesson] = set()
 
+    @benchmark('total')
     def set_default_values(self) -> None:
         self._set_groups()
         self._set_teachers()

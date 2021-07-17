@@ -1,3 +1,4 @@
+import asyncio
 import re
 import time
 from datetime import date, datetime, timedelta
@@ -11,8 +12,8 @@ from models.teacher import Teacher
 from models.unversity_template import UniversityTemplate
 from services.decorators import benchmark
 from services.exceptions import ExternalError
-from services.helper import get_json, get_page
-from spbstu.config import LINKS
+from services.helper import get_json, get_page, get_page_async, get_json_async, humanize_weekday
+from spbstu.config import LINKS, MAX_PARALLEL_REQUESTS
 
 
 class Spbstu(UniversityTemplate):
@@ -20,16 +21,42 @@ class Spbstu(UniversityTemplate):
     @benchmark('set groups')
     def _set_groups(self) -> None:
         faculties = self._get_faculties()
-        for f in faculties:
+        loop = asyncio.get_event_loop()
+        loop.run_until_complete(self._set_events_to_get_groups(faculties))
+
+    async def _set_events_to_get_groups(self, faculties: []) -> None:
+        semaphore = asyncio.Semaphore(MAX_PARALLEL_REQUESTS)
+        await asyncio.wait([
+            asyncio.create_task(self._extend_groups(faculty, semaphore))
+            for faculty in faculties
+        ])
+
+    async def _extend_groups(self, faculty, semaphore) -> None:
+        async with semaphore:
+            page = await self._get_groups_from_page(faculty)
             for group in (list(map(
-                lambda g: Group(g['id'], g['name'], f['name'], g['type'], g['level']),
-                self._parse_groups_to_list(
-                    self._get_groups_from_page(
-                        get_page(LINKS['BASE'] + f['link'], 'GET')
-                    )
-                )
+                    lambda g: Group(g['id'], g['name'], faculty['name'], g['type'], g['level']),
+                    self._parse_groups_to_list(page)
             ))):
                 self.groups[group.id] = group
+
+    @staticmethod
+    async def _get_groups_from_page(faculty) -> BeautifulSoup:
+        soup = await get_page_async(LINKS['BASE'] + faculty['link'], 'GET')
+        return soup
+
+    @staticmethod
+    def _parse_groups_page_to_string(soup: BeautifulSoup) -> str:
+        res = soup.find_all('script')
+        for r in res:
+            if r.string is not None and len(r.attrs) == 0:
+                return r.string
+
+    def _parse_groups_to_list(self, page: BeautifulSoup) -> [{str, str}]:
+        groups = self._parse_groups_page_to_string(page)
+        pattern = re.compile(r'"id":(?P<id>\d+),"name":"(?P<name>\w+/\w+)",'
+                             r'"level":(?P<level>\d+),"type":"(?P<type>\w+)"')
+        return [m.groupdict() for m in pattern.finditer(groups)]
 
     @benchmark('set teachers (includes set schedule)')
     def _set_teachers(self) -> None:
@@ -92,18 +119,45 @@ class Spbstu(UniversityTemplate):
             lesson_number = self._calculate_lesson_number(start_time, end_time)
             self.lessons.add(Lesson(
                 subject, groups, teachers, lesson_number, lesson['is_odd_week'],
-                self._humanize_weekday(lesson['weekday']), start_time, end_time,
+                humanize_weekday(lesson['weekday']), start_time, end_time,
                 lesson_type, classrooms, tags)
             )
 
     @benchmark('set schedule')
     def _set_schedule(self) -> None:
         odd_week_start, even_week_start = self._get_mondays_date()
-        for group in self.groups.values():
-            self.schedule.extend(self._get_schedule_for_the_week(group.id, odd_week_start))
-            self.schedule.extend(self._get_schedule_for_the_week(group.id, even_week_start))
+        loop = asyncio.get_event_loop()
+        loop.run_until_complete(self._set_events_to_get_schedule(odd_week_start, even_week_start))
 
-    def _get_mondays_date(self) -> (datetime, datetime):
+    async def _set_events_to_get_schedule(self, odd_week_start: date, even_week_start: date) -> None:
+        semaphore = asyncio.Semaphore(MAX_PARALLEL_REQUESTS)
+        await asyncio.wait([
+            asyncio.create_task(self._extend_schedule(group, odd_week_start, even_week_start, semaphore))
+            for group in self.groups.values()
+        ])
+
+    async def _extend_schedule(self, group: Group, odd_week_start: date, even_week_start: date, semaphore):
+        async with semaphore:
+            odd = await self._get_schedule_for_the_week(group.id, odd_week_start)
+            even = await self._get_schedule_for_the_week(group.id, even_week_start)
+            self.schedule.extend(odd)
+            self.schedule.extend(even)
+
+    @staticmethod
+    async def _get_schedule_for_the_week(group_id: int, first_week_day: date) -> [{}]:
+        res = await get_json_async(
+            LINKS['GET_SCHEDULE_BY_GROUP'] + str(group_id),
+            method='GET',
+            date=first_week_day.strftime('%Y-%m-%d')
+        )
+        return [{'date': x['date'],
+                 'weekday': x['weekday'],
+                 'lesson': y,
+                 'group_id': group_id,
+                 'is_odd_week': res['week']['is_odd']}
+                for x in res['days'] for y in x['lessons']]
+
+    def _get_mondays_date(self) -> (date, date):
         week = self._get_current_week()
 
         # :TODO удалить дельту недель в строке ниже потом!!!!!!
@@ -125,33 +179,10 @@ class Spbstu(UniversityTemplate):
         }
 
     @staticmethod
-    def _get_schedule_for_the_week(group_id: int, first_week_day: date) -> [{}]:
-        res = get_json(LINKS['GET_SCHEDULE_BY_GROUP'] + str(group_id), 'GET', date=first_week_day)
-        return [{'date': x['date'],
-                 'weekday': x['weekday'],
-                 'lesson': y,
-                 'group_id': group_id,
-                 'is_odd_week': res['week']['is_odd']}
-                for x in res['days'] for y in x['lessons']]
-
-    @staticmethod
     def _get_faculties() -> [str]:
         soup = get_page(LINKS['BASE'])
         faculties = soup.find_all('a', class_='faculty-list__link')
         return [{'link': f.get('href'), 'name': f.text} for f in faculties]
-
-    @staticmethod
-    def _get_groups_from_page(soup: BeautifulSoup) -> str:
-        res = soup.find_all('script')
-        for r in res:
-            if r.string is not None and len(r.attrs) == 0:
-                return r.string
-
-    @staticmethod
-    def _parse_groups_to_list(groups: str) -> [{str, str}]:
-        pattern = re.compile(r'"id":(?P<id>\d+),"name":"(?P<name>\w+/\w+)",'
-                             r'"level":(?P<level>\d+),"type":"(?P<type>\w+)"')
-        return [m.groupdict() for m in pattern.finditer(groups)]
 
     @staticmethod
     def _calculate_lesson_number(start_time: time, end_time: time) -> int:
@@ -174,16 +205,3 @@ class Spbstu(UniversityTemplate):
         if hours not in table.keys():
             return 0
         return table[hours]
-
-    @staticmethod
-    def _humanize_weekday(weekday: int) -> str:
-        days = {
-            1: 'пн',
-            2: 'вт',
-            3: 'ср',
-            4: 'чт',
-            5: 'пт',
-            6: 'сб',
-            7: 'вс'
-        }
-        return days[weekday]

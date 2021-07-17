@@ -9,6 +9,7 @@ python = "^3.9"
 requests = "^2.25.1"
 bs4 = "^0.0.1"
 lxml = "^4.6.3"
+aiohttp = "^3.7.4"
 
 [tool.poetry.dev-dependencies]
 
