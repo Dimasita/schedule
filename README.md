@@ -3,6 +3,7 @@ docker build . -t image_name
 docker run -i --rm \
                     -v `pwd`/NAME_OUTPUT_FILE.JSON:/app/output.json \  
                     -v `pwd`/NAME_INPUT_FILE.JSON:/app/input.json \  
+                    -v `pwd`/timings.txt:/app/timings.txt \  
                     -e univer=UNIVER_NAME image_name  
 <br>
 Если есть входной файл, из него берутся все имеющиеся в нем поля из списка:   
@@ -16,6 +17,6 @@ docker run -i --rm \
   Будет дополняться (наверно))
    
 Пример с входным файлом:  
-docker run -i --rm -v `pwd`/output.json:/app/output.json -v `pwd`/input.json:/app/input.json -e univer=spbstu image_name  
+docker run -i --rm -v `pwd`/output.json:/app/output.json -v `pwd`/input.json:/app/input.json -v `pwd`/timings.txt:/app/timings.txt -e univer=spbstu image_name  
 Без входного файла:  
-docker run -i --rm -v `pwd`/output.json:/app/output.json -e univer=spbstu image_name  
+docker run -i --rm -v `pwd`/output.json:/app/output.json -v `pwd`/timings.txt:/app/timings.txt -e univer=spbstu image_name  

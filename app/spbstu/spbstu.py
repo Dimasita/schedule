@@ -12,8 +12,8 @@ from models.teacher import Teacher
 from models.unversity_template import UniversityTemplate
 from services.decorators import benchmark
 from services.exceptions import ExternalError
-from services.helper import get_json, get_page, get_page_async, get_json_async
-from spbstu.config import LINKS
+from services.helper import get_json, get_page, get_page_async, get_json_async, humanize_weekday
+from spbstu.config import LINKS, MAX_PARALLEL_REQUESTS
 
 
 class Spbstu(UniversityTemplate):
@@ -25,18 +25,20 @@ class Spbstu(UniversityTemplate):
         loop.run_until_complete(self._set_events_to_get_groups(faculties))
 
     async def _set_events_to_get_groups(self, faculties: []) -> None:
+        semaphore = asyncio.Semaphore(MAX_PARALLEL_REQUESTS)
         await asyncio.wait([
-            asyncio.create_task(self._extend_groups(faculty))
+            asyncio.create_task(self._extend_groups(faculty, semaphore))
             for faculty in faculties
         ])
 
-    async def _extend_groups(self, faculty):
-        page = await self._get_groups_from_page(faculty)
-        for group in (list(map(
-                lambda g: Group(g['id'], g['name'], faculty['name'], g['type'], g['level']),
-                self._parse_groups_to_list(page)
-        ))):
-            self.groups[group.id] = group
+    async def _extend_groups(self, faculty, semaphore) -> None:
+        async with semaphore:
+            page = await self._get_groups_from_page(faculty)
+            for group in (list(map(
+                    lambda g: Group(g['id'], g['name'], faculty['name'], g['type'], g['level']),
+                    self._parse_groups_to_list(page)
+            ))):
+                self.groups[group.id] = group
 
     @staticmethod
     async def _get_groups_from_page(faculty) -> BeautifulSoup:
@@ -117,7 +119,7 @@ class Spbstu(UniversityTemplate):
             lesson_number = self._calculate_lesson_number(start_time, end_time)
             self.lessons.add(Lesson(
                 subject, groups, teachers, lesson_number, lesson['is_odd_week'],
-                self._humanize_weekday(lesson['weekday']), start_time, end_time,
+                humanize_weekday(lesson['weekday']), start_time, end_time,
                 lesson_type, classrooms, tags)
             )
 
@@ -128,16 +130,18 @@ class Spbstu(UniversityTemplate):
         loop.run_until_complete(self._set_events_to_get_schedule(odd_week_start, even_week_start))
 
     async def _set_events_to_get_schedule(self, odd_week_start: date, even_week_start: date) -> None:
+        semaphore = asyncio.Semaphore(MAX_PARALLEL_REQUESTS)
         await asyncio.wait([
-            asyncio.create_task(self._extend_schedule(group, odd_week_start, even_week_start))
+            asyncio.create_task(self._extend_schedule(group, odd_week_start, even_week_start, semaphore))
             for group in self.groups.values()
         ])
 
-    async def _extend_schedule(self, group: Group, odd_week_start: date, even_week_start: date):
-        odd = await self._get_schedule_for_the_week(group.id, odd_week_start)
-        even = await self._get_schedule_for_the_week(group.id, even_week_start)
-        self.schedule.extend(odd)
-        self.schedule.extend(even)
+    async def _extend_schedule(self, group: Group, odd_week_start: date, even_week_start: date, semaphore):
+        async with semaphore:
+            odd = await self._get_schedule_for_the_week(group.id, odd_week_start)
+            even = await self._get_schedule_for_the_week(group.id, even_week_start)
+            self.schedule.extend(odd)
+            self.schedule.extend(even)
 
     @staticmethod
     async def _get_schedule_for_the_week(group_id: int, first_week_day: date) -> [{}]:
@@ -202,15 +206,3 @@ class Spbstu(UniversityTemplate):
             return 0
         return table[hours]
 
-    @staticmethod
-    def _humanize_weekday(weekday: int) -> str:
-        days = {
-            1: 'пн',
-            2: 'вт',
-            3: 'ср',
-            4: 'чт',
-            5: 'пт',
-            6: 'сб',
-            7: 'вс'
-        }
-        return days[weekday]

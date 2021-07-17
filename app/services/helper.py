@@ -1,9 +1,23 @@
+import asyncio
 import json
 import requests
 import aiohttp
 from bs4 import BeautifulSoup
 
 from services.exceptions import ExternalError
+
+
+def humanize_weekday(weekday: int) -> str:
+    days = {
+        1: 'пн',
+        2: 'вт',
+        3: 'ср',
+        4: 'чт',
+        5: 'пт',
+        6: 'сб',
+        7: 'вс'
+    }
+    return days[weekday]
 
 
 async def get_page_async(link: str, method: str = 'POST', **kwargs) -> BeautifulSoup:
@@ -49,4 +63,3 @@ def _make_request(link: str, method: str = 'POST', **kwargs) -> requests:
     if response.status_code != 200:
         raise ExternalError(f'Description {response.status_code}\n{link}')
     return response
-
