@@ -12,8 +12,8 @@ class Lesson:
     is_odd_week: bool
     weekday: str
     lesson_number: int
-    start_time: time
-    end_time: time
+    start_time: str
+    end_time: str
     lesson_type: str
     tags: list[{}]
     classrooms: list[{}]
@@ -27,8 +27,8 @@ class Lesson:
         self.is_odd_week = is_odd_week
         self.weekday = weekday
         self.lesson_number = lesson_number
-        self.start_time = start_time
-        self.end_time = end_time
+        self.start_time = f'{start_time.tm_hour:02d}:{start_time.tm_min:02d}'
+        self.end_time = f'{end_time.tm_hour:02d}:{end_time.tm_min:02d}'
         self.lesson_type = lesson_type
         self.tags = tags
         self.classrooms = classrooms

@@ -31,17 +31,6 @@ class Spbstu(UniversityTemplate):
             ))):
                 self.groups[group.id] = group
 
-        # :TODO REMOVE THIS
-        i = 0
-        buff = dict()
-        for key, value in self.groups.items():
-            if i > 15:
-                break
-            i += 1
-            buff[key] = value
-        self.groups = buff
-        # :TODO REMOVE THIS
-
     @benchmark('set teachers (includes set schedule)')
     def _set_teachers(self) -> None:
         if len(self.schedule) == 0:
@@ -82,13 +71,7 @@ class Spbstu(UniversityTemplate):
             tags = list()
             if lesson['lesson']['groups'] is not None:
                 for group in lesson['lesson']['groups']:
-
-                    # :TODO REMOVE THIS
-                    if group['id'] not in self.groups.keys():
-                        self.groups[group['id']] = Group(group['id'], 'name', 'faculty', 'edu_type', 1)
-                    # :TODO REMOVE THIS
-
-                    groups.append(self.groups[group['id']])
+                    groups.append(self.groups[int(group['id'])])
             if lesson['lesson']['teachers'] is not None:
                 for teacher in lesson['lesson']['teachers']:
                     teachers.append(self.teachers[teacher['id']])
@@ -106,7 +89,7 @@ class Spbstu(UniversityTemplate):
             subject = self.subjects[sha256(lesson['lesson']['subject'].encode('utf-8')).hexdigest()]
             start_time = time.strptime(lesson['lesson']['time_start'], '%H:%M')
             end_time = time.strptime(lesson['lesson']['time_start'], '%H:%M')
-            lesson_number = self._calculate_lesson_number(start_time)
+            lesson_number = self._calculate_lesson_number(start_time, end_time)
             self.lessons.add(Lesson(
                 subject, groups, teachers, lesson_number, lesson['is_odd_week'],
                 self._humanize_weekday(lesson['weekday']), start_time, end_time,
@@ -171,9 +154,26 @@ class Spbstu(UniversityTemplate):
         return [m.groupdict() for m in pattern.finditer(groups)]
 
     @staticmethod
-    def _calculate_lesson_number(start_time: time) -> int:
-        # :TODO (idk how to calculate this)
-        return 0
+    def _calculate_lesson_number(start_time: time, end_time: time) -> int:
+        start = timedelta(hours=start_time.tm_hour, minutes=start_time.tm_min)
+        end = timedelta(hours=end_time.tm_hour + 1, minutes=end_time.tm_min + 30)
+        delta = end - start
+        if delta.total_seconds() != 5400 and delta.total_seconds() != 6000:
+            return 0
+        table = {
+            8: 1,
+            10: 2,
+            12: 3,
+            14: 4,
+            16: 5,
+            18: 6,
+            20: 7
+        }
+        hours = start_time.tm_hour
+        minutes = start_time.tm_min
+        if hours not in table.keys():
+            return 0
+        return table[hours]
 
     @staticmethod
     def _humanize_weekday(weekday: int) -> str:
