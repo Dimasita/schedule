@@ -1,3 +1,4 @@
+import asyncio
 import re
 import time
 from datetime import date, datetime, timedelta
@@ -11,7 +12,7 @@ from models.teacher import Teacher
 from models.unversity_template import UniversityTemplate
 from services.decorators import benchmark
 from services.exceptions import ExternalError
-from services.helper import get_json, get_page
+from services.helper import get_json, get_page, get_page_async, get_json_async
 from spbstu.config import LINKS
 
 
@@ -30,17 +31,6 @@ class Spbstu(UniversityTemplate):
                 )
             ))):
                 self.groups[group.id] = group
-
-        # :TODO REMOVE THIS
-        i = 0
-        buff = dict()
-        for key, value in self.groups.items():
-            if i > 15:
-                break
-            i += 1
-            buff[key] = value
-        self.groups = buff
-        # :TODO REMOVE THIS
 
     @benchmark('set teachers (includes set schedule)')
     def _set_teachers(self) -> None:
@@ -82,13 +72,7 @@ class Spbstu(UniversityTemplate):
             tags = list()
             if lesson['lesson']['groups'] is not None:
                 for group in lesson['lesson']['groups']:
-
-                    # :TODO REMOVE THIS
-                    if group['id'] not in self.groups.keys():
-                        self.groups[group['id']] = Group(group['id'], 'name', 'faculty', 'edu_type', 1)
-                    # :TODO REMOVE THIS
-
-                    groups.append(self.groups[group['id']])
+                    groups.append(self.groups[int(group['id'])])
             if lesson['lesson']['teachers'] is not None:
                 for teacher in lesson['lesson']['teachers']:
                     teachers.append(self.teachers[teacher['id']])
@@ -106,7 +90,7 @@ class Spbstu(UniversityTemplate):
             subject = self.subjects[sha256(lesson['lesson']['subject'].encode('utf-8')).hexdigest()]
             start_time = time.strptime(lesson['lesson']['time_start'], '%H:%M')
             end_time = time.strptime(lesson['lesson']['time_start'], '%H:%M')
-            lesson_number = self._calculate_lesson_number(start_time)
+            lesson_number = self._calculate_lesson_number(start_time, end_time)
             self.lessons.add(Lesson(
                 subject, groups, teachers, lesson_number, lesson['is_odd_week'],
                 self._humanize_weekday(lesson['weekday']), start_time, end_time,
@@ -116,11 +100,36 @@ class Spbstu(UniversityTemplate):
     @benchmark('set schedule')
     def _set_schedule(self) -> None:
         odd_week_start, even_week_start = self._get_mondays_date()
-        for group in self.groups.values():
-            self.schedule.extend(self._get_schedule_for_the_week(group.id, odd_week_start))
-            self.schedule.extend(self._get_schedule_for_the_week(group.id, even_week_start))
+        loop = asyncio.get_event_loop()
+        loop.run_until_complete(self._set_events_to_get_schedule(odd_week_start, even_week_start))
 
-    def _get_mondays_date(self) -> (datetime, datetime):
+    async def _set_events_to_get_schedule(self, odd_week_start: date, even_week_start: date) -> None:
+        await asyncio.wait([
+            asyncio.create_task(self._extend_schedule(group, odd_week_start, even_week_start))
+            for group in self.groups.values()
+        ])
+
+    async def _extend_schedule(self, group: Group, odd_week_start: date, even_week_start: date):
+        odd = await self._get_schedule_for_the_week(group.id, odd_week_start)
+        even = await self._get_schedule_for_the_week(group.id, even_week_start)
+        self.schedule.extend(odd)
+        self.schedule.extend(even)
+
+    @staticmethod
+    async def _get_schedule_for_the_week(group_id: int, first_week_day: date) -> [{}]:
+        res = await get_json_async(
+            LINKS['GET_SCHEDULE_BY_GROUP'] + str(group_id),
+            method='GET',
+            date=first_week_day.strftime('%Y-%m-%d')
+        )
+        return [{'date': x['date'],
+                 'weekday': x['weekday'],
+                 'lesson': y,
+                 'group_id': group_id,
+                 'is_odd_week': res['week']['is_odd']}
+                for x in res['days'] for y in x['lessons']]
+
+    def _get_mondays_date(self) -> (date, date):
         week = self._get_current_week()
 
         # :TODO удалить дельту недель в строке ниже потом!!!!!!
@@ -142,16 +151,6 @@ class Spbstu(UniversityTemplate):
         }
 
     @staticmethod
-    def _get_schedule_for_the_week(group_id: int, first_week_day: date) -> [{}]:
-        res = get_json(LINKS['GET_SCHEDULE_BY_GROUP'] + str(group_id), 'GET', date=first_week_day)
-        return [{'date': x['date'],
-                 'weekday': x['weekday'],
-                 'lesson': y,
-                 'group_id': group_id,
-                 'is_odd_week': res['week']['is_odd']}
-                for x in res['days'] for y in x['lessons']]
-
-    @staticmethod
     def _get_faculties() -> [str]:
         soup = get_page(LINKS['BASE'])
         faculties = soup.find_all('a', class_='faculty-list__link')
@@ -171,9 +170,26 @@ class Spbstu(UniversityTemplate):
         return [m.groupdict() for m in pattern.finditer(groups)]
 
     @staticmethod
-    def _calculate_lesson_number(start_time: time) -> int:
-        # :TODO (idk how to calculate this)
-        return 0
+    def _calculate_lesson_number(start_time: time, end_time: time) -> int:
+        start = timedelta(hours=start_time.tm_hour, minutes=start_time.tm_min)
+        end = timedelta(hours=end_time.tm_hour + 1, minutes=end_time.tm_min + 30)
+        delta = end - start
+        if delta.total_seconds() != 5400 and delta.total_seconds() != 6000:
+            return 0
+        table = {
+            8: 1,
+            10: 2,
+            12: 3,
+            14: 4,
+            16: 5,
+            18: 6,
+            20: 7
+        }
+        hours = start_time.tm_hour
+        minutes = start_time.tm_min
+        if hours not in table.keys():
+            return 0
+        return table[hours]
 
     @staticmethod
     def _humanize_weekday(weekday: int) -> str:
