@@ -19,7 +19,7 @@ async def get_json_async(link: str, method: str = 'POST', **kwargs) -> json:
 async def _make_async_request(link: str, method: str = 'POST', **kwargs):
     async with aiohttp.ClientSession() as session:
         if method == 'POST':
-            async with session.post(link, params={**kwargs}) as response:
+            async with session.post(link, data={**kwargs}) as response:
                 status = response.status
                 data = await response.read()
         else:
@@ -27,7 +27,7 @@ async def _make_async_request(link: str, method: str = 'POST', **kwargs):
                 status = response.status
                 data = await response.read()
     if status != 200:
-        raise ExternalError(f'Description {status}\n{link}')
+        raise ExternalError(f'Request error, code: {status}, method: {method}\n{link}\n{kwargs}')
     return data
 
 
