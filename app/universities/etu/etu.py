@@ -5,10 +5,10 @@ from models.group import Group
 from models.lesson import Lesson
 from models.subject import Subject
 from models.teacher import Teacher
-from unversities.university import University
+from universities.university import University
 from services.helper import humanize_weekday, get_correct_lesson_type
 from services.requests import get_json
-from unversities.etu.config import LINK
+from universities.etu.config import LINK
 from services.decorators import benchmark
 
 

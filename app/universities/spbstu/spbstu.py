@@ -8,12 +8,12 @@ from models.group import Group
 from models.lesson import Lesson
 from models.subject import Subject
 from models.teacher import Teacher
-from unversities.university import University
+from universities.university import University
 from services.decorators import benchmark
 from services.exceptions import ExternalError
 from services.helper import humanize_weekday, get_correct_lesson_type
 from services.requests import get_json, get_page, get_page_async, get_json_async
-from unversities.spbstu.config import LINKS, MAX_PARALLEL_REQUESTS
+from universities.spbstu.config import LINKS, MAX_PARALLEL_REQUESTS
 
 
 class Spbstu(University):

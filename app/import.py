@@ -2,7 +2,7 @@ import json
 import sys
 from json import JSONDecodeError
 
-from unversities import *
+from universities import *
 
 
 UNIVERSITIES = {

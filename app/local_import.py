@@ -1,6 +1,7 @@
 import json
+import os
 
-from unversities import *
+from universities import *
 
 UNIVERSITIES = {
     'spbstu': Spbstu,
@@ -11,7 +12,9 @@ UNIVERSITIES = {
 }
 
 if __name__ == '__main__':
-    university = UNIVERSITIES['spbstu']()
+    university_name = os.getenv('university')
+
+    university = UNIVERSITIES[university_name]()
     university.set_default_values()
-    with open('data.json', 'w', encoding='utf-8') as f:
+    with open(fr'{os.getcwd()}\universities\{university_name}\data.json', 'w+', encoding='utf-8') as f:
         json.dump(university.get_values(), f, ensure_ascii=False)
