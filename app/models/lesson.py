@@ -1,4 +1,4 @@
-import time
+from datetime import time
 
 from models.subject import Subject
 from models.teacher import Teacher
@@ -27,8 +27,8 @@ class Lesson:
         self.is_odd_week = is_odd_week
         self.weekday = weekday
         self.lesson_number = lesson_number
-        self.start_time = f'{start_time.tm_hour:02d}:{start_time.tm_min:02d}'
-        self.end_time = f'{end_time.tm_hour:02d}:{end_time.tm_min:02d}'
+        self.start_time = f'{start_time.hour:02d}:{start_time.minute:02d}'
+        self.end_time = f'{end_time.hour:02d}:{end_time.minute:02d}'
         self.lesson_type = lesson_type
         self.tags = tags
         self.classrooms = classrooms

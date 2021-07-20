@@ -1,7 +1,6 @@
 import asyncio
 import re
-import time
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, time
 from hashlib import sha256
 from bs4 import BeautifulSoup
 
@@ -9,15 +8,15 @@ from models.group import Group
 from models.lesson import Lesson
 from models.subject import Subject
 from models.teacher import Teacher
-from models.unversity_template import UniversityTemplate
+from unversities.university import University
 from services.decorators import benchmark
 from services.exceptions import ExternalError
-from services.helper import get_json, get_page, get_page_async, get_json_async, humanize_weekday
-from spbstu.config import LINKS, MAX_PARALLEL_REQUESTS
+from services.helper import humanize_weekday, get_correct_lesson_type
+from services.requests import get_json, get_page, get_page_async, get_json_async
+from unversities.spbstu.config import LINKS, MAX_PARALLEL_REQUESTS
 
 
-class Spbstu(UniversityTemplate):
-
+class Spbstu(University):
     @benchmark('set groups')
     def _set_groups(self) -> None:
         faculties = self._get_faculties()
@@ -110,12 +109,12 @@ class Spbstu(UniversityTemplate):
             if lesson['lesson']['lms_url'] is not None and lesson['lesson']['lms_url'] != '':
                 tags.append({'text': '', 'link': lesson['lesson']['lms_url'], 'type': 'blue'})
             if lesson['lesson']['typeObj'] is not None:
-                lesson_type = lesson['lesson']['typeObj']['name']
+                lesson_type = get_correct_lesson_type(lesson['lesson']['typeObj']['name'])
             else:
-                lesson_type = 'default'
+                lesson_type = None
             subject = self.subjects[sha256(lesson['lesson']['subject'].encode('utf-8')).hexdigest()]
-            start_time = time.strptime(lesson['lesson']['time_start'], '%H:%M')
-            end_time = time.strptime(lesson['lesson']['time_start'], '%H:%M')
+            start_time = datetime.strptime(lesson['lesson']['time_start'], '%H:%M').time()
+            end_time = datetime.strptime(lesson['lesson']['time_start'], '%H:%M').time()
             lesson_number = self._calculate_lesson_number(start_time, end_time)
             self.lessons.add(Lesson(
                 subject, groups, teachers, lesson_number, lesson['is_odd_week'],
@@ -186,8 +185,8 @@ class Spbstu(UniversityTemplate):
 
     @staticmethod
     def _calculate_lesson_number(start_time: time, end_time: time) -> int:
-        start = timedelta(hours=start_time.tm_hour, minutes=start_time.tm_min)
-        end = timedelta(hours=end_time.tm_hour + 1, minutes=end_time.tm_min + 30)
+        start = timedelta(hours=start_time.hour, minutes=start_time.minute)
+        end = timedelta(hours=end_time.hour + 1, minutes=end_time.minute + 30)
         delta = end - start
         if delta.total_seconds() != 5400 and delta.total_seconds() != 6000:
             return 0
@@ -200,8 +199,7 @@ class Spbstu(UniversityTemplate):
             18: 6,
             20: 7
         }
-        hours = start_time.tm_hour
-        minutes = start_time.tm_min
+        hours = start_time.hour
         if hours not in table.keys():
             return 0
         return table[hours]

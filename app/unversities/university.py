@@ -7,7 +7,7 @@ from models.lesson import Lesson
 from services.decorators import benchmark
 
 
-class UniversityTemplate:
+class University:
     groups: {int: Group} = dict()
     teachers: {int: Teacher} = dict()
     subjects: {str: Subject} = dict()

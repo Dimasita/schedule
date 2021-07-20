@@ -1,11 +1,15 @@
+from typing import Optional
+
+
 class Group:
     id: int
     name: str
-    faculty: str
-    education_type: str
-    level: int
+    faculty: Optional[str]
+    education_type: Optional[str]
+    level: Optional[int]
 
-    def __init__(self, group_id: int, name: str, faculty: str, education_type: str, level: int):
+    def __init__(self, group_id: int, name: str, faculty: str = None,
+                 education_type: str = None, level: int = None):
         self.id = int(group_id)
         self.name = name
         self.faculty = faculty

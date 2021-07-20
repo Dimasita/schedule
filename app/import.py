@@ -2,15 +2,17 @@ import json
 import sys
 from json import JSONDecodeError
 
-from bstu.bstu import Bstu
-from etu.etu import Etu
-from spbstu.spbstu import Spbstu
+from unversities import *
+
 
 UNIVERSITIES = {
     'spbstu': Spbstu,
+    # 'unecon': Unecon,
     'etu': Etu,
-    'bstu': Bstu
+    'bstu': Bstu,
+    # 'itmo': Itmo
 }
+
 
 if __name__ == '__main__':
     if len(sys.argv) == 1:

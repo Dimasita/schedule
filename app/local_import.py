@@ -1,17 +1,17 @@
 import json
 
-from bstu.bstu import Bstu
-from etu.etu import Etu
-from spbstu.spbstu import Spbstu
+from unversities import *
 
 UNIVERSITIES = {
     'spbstu': Spbstu,
+    'unecon': Unecon,
     'etu': Etu,
-    'bstu': Bstu
+    'bstu': Bstu,
+    'itmo': Itmo
 }
 
 if __name__ == '__main__':
-    university = UNIVERSITIES['etu']()
+    university = UNIVERSITIES['spbstu']()
     university.set_default_values()
     with open('data.json', 'w', encoding='utf-8') as f:
         json.dump(university.get_values(), f, ensure_ascii=False)

@@ -1,3 +1,7 @@
-/.idea
-/app/unecon/
-/app/etu/
+/.idea/
+
+/app/**/data.json
+/app/timings.txt
+/todo_list.txt
+
+/app/unversities/unecon/unecon.py
