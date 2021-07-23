@@ -7,10 +7,14 @@ from universities import *
 
 UNIVERSITIES = {
     'spbstu': Spbstu,
-    # 'unecon': Unecon,
     'etu': Etu,
     'bstu': Bstu,
-    # 'itmo': Itmo
+    'itmo': Itmo,
+    # 'ranepa': Ranepa,
+    # 'spbu': Spbu,
+    # 'sutd': Sutd,
+    # 'spmi': Spmi,
+    # 'unecon': Unecon,
 }
 
 

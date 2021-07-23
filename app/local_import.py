@@ -5,11 +5,16 @@ from universities import *
 
 UNIVERSITIES = {
     'spbstu': Spbstu,
-    'unecon': Unecon,
     'etu': Etu,
     'bstu': Bstu,
-    'itmo': Itmo
+    'itmo': Itmo,
+    # 'ranepa': Ranepa,
+    # 'spbu': Spbu,
+    # 'sutd': Sutd,
+    # 'spmi': Spmi,
+    # 'unecon': Unecon,
 }
+
 
 if __name__ == '__main__':
     university_name = os.getenv('university')
