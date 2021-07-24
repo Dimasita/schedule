@@ -10,7 +10,6 @@ from models.subject import Subject
 from models.teacher import Teacher
 from universities.university import University
 from services.decorators import benchmark
-from services.exceptions import ExternalError
 from services.helper import humanize_weekday, get_correct_lesson_type
 from services.requests import get_json, get_page, get_page_async, get_json_async
 from universities.itmo.config import LINKS, MAX_PARALLEL_REQUESTS, FIRST_WEEK_MONDAY_DATE
@@ -50,8 +49,7 @@ class Itmo(University):
             name = lesson['lesson'].find('b')
             if name is not None:
                 name = name.text.strip()
-                t_id = sha256(name.encode('utf-8')).hexdigest()
-                teacher = Teacher(int(t_id, 16), name)
+                teacher = Teacher(sha256(name.encode('utf-8')).hexdigest(), name)
                 if teacher.id not in teachers_ids:
                     teachers_ids.add(teacher.id)
                     self.teachers[teacher.id] = teacher
@@ -86,7 +84,7 @@ class Itmo(University):
             t_name = lesson.find('b')
             if t_name is not None:
                 t_name = t_name.text.strip()
-                teachers.append(self.teachers[int(sha256(t_name.encode('utf-8')).hexdigest(), 16)])
+                teachers.append(self.teachers[sha256(t_name.encode('utf-8')).hexdigest()])
 
             room = lesson.find('td', class_='room')
             classrooms.append({
@@ -129,67 +127,65 @@ class Itmo(University):
 
     def _parse_schedule_page_to_list(self, soup: BeautifulSoup, group_id: int) -> [{}]:
         res = list()
-        if group_id == 23260064379121035440413837092162989164688244427279882378615844646719144109190:
-            print(11)
-        schedule = soup.find_all('table', class_='rasp_tabl')
+        schedule = soup.find_all('div', class_='rasp_tabl_day')
         for s in schedule:
-            if 'id' not in s.attrs.keys():
-                continue
             try:
-                weekday = re.findall(r'\d', s.attrs['id'])[0]
+                weekday = re.findall(r'\d', s.table.attrs['id'])[0]
             except IndexError:
                 weekday = None
+            calendar_day = None
             lessons = s.find_all('tr')
             for lsn in lessons:
                 if len(lsn) == 0:
                     continue
+
                 if weekday is None:
                     res.append({'group_id': group_id, 'lesson': lsn, 'weekday': None, 'is_odd_week': None})
                     continue
+
                 if len(re.findall('четная', lsn.find('td', class_='lesson').text)) == 1:
                     res.append({'group_id': group_id, 'lesson': lsn, 'weekday': weekday, 'is_odd_week': False})
-                else:
-                    if len(re.findall('нечетная', lsn.find('td', class_='lesson').text)) == 1:
-                        res.append({'group_id': group_id, 'lesson': lsn, 'weekday': weekday, 'is_odd_week': True})
+                    continue
+                if len(re.findall('нечетная', lsn.find('td', class_='lesson').text)) == 1:
+                    res.append({'group_id': group_id, 'lesson': lsn, 'weekday': weekday, 'is_odd_week': True})
+                    continue
+
+                if calendar_day is None:
+                    calendar_day = re.findall(r'(\d{1,2}.\d{1,2}.\d{2})', lsn.find('th', class_='day').text)
+                if len(calendar_day) == 1:
+                    day_to_date = datetime.strptime(calendar_day[0], '%d.%m.%y').date()
+                    if self.schedule_start_date <= day_to_date < self.schedule_end_date:
+                        res.append({
+                            'group_id': group_id,
+                            'lesson': lsn,
+                            'weekday': weekday,
+                            'is_odd_week': self._is_odd_week(day_to_date)
+                        })
+                        continue
                     else:
-                        day = re.findall(r'(\d{1,2}.\d{1,2}.\d{2})', lsn.find('th', class_='day').text)
-                        if len(day) == 1:
-                            day_to_date = datetime.strptime(day[0], '%d.%m.%y').date()
-                            if self.schedule_start_date <= day_to_date < self.schedule_end_date:
-                                res.append({
-                                    'group_id': group_id,
-                                    'lesson': lsn,
-                                    'weekday': weekday,
-                                    'is_odd_week': self._is_odd_week(day_to_date)
-                                })
-                        else:
-                            days = lsn.find('td', class_='time')
-                            if days.find('div') is not None:
-                                for week in days.find('div').text.split(','):
-                                    if int(week) == self.current_week_number:
-                                        res.append({
-                                            'group_id': group_id,
-                                            'lesson': lsn,
-                                            'weekday': weekday,
-                                            'is_odd_week': False if int(week) % 2 == 0 else True
-                                        })
-                                        continue
-                                    if int(week) == self.current_week_number + 1:
-                                        res.append({
-                                            'group_id': group_id,
-                                            'lesson': lsn,
-                                            'weekday': weekday,
-                                            'is_odd_week': True if int(week) % 2 == 0 else False
-                                        })
-                            else:
-                                res.append({
-                                    'group_id': group_id, 'lesson': lsn,
-                                    'weekday': weekday, 'is_odd_week': False
-                                })
-                                res.append({
-                                    'group_id': group_id, 'lesson': lsn,
-                                    'weekday': weekday, 'is_odd_week': True
-                                })
+                        break
+
+                weeks_numbers = lsn.find('td', class_='time')
+                if weeks_numbers.find('div') is not None:
+                    for week in weeks_numbers.find('div').text.split(','):
+                        if int(week) == self.current_week_number:
+                            res.append({
+                                'group_id': group_id,
+                                'lesson': lsn,
+                                'weekday': weekday,
+                                'is_odd_week': False if int(week) % 2 == 0 else True
+                            })
+                            continue
+                        if int(week) == self.current_week_number + 1:
+                            res.append({
+                                'group_id': group_id,
+                                'lesson': lsn,
+                                'weekday': weekday,
+                                'is_odd_week': True if int(week) % 2 == 0 else False
+                            })
+                else:
+                    res.append({'group_id': group_id, 'lesson': lsn, 'weekday': weekday, 'is_odd_week': False})
+                    res.append({'group_id': group_id, 'lesson': lsn, 'weekday': weekday, 'is_odd_week': True})
         return res
 
     def _set_dates(self) -> None:
@@ -214,7 +210,7 @@ class Itmo(University):
             lst = soup.find('div', id=f'tab{i}')
             groups = lst.find_all('a')
             for g in groups:
-                res.append({'id': int(sha256(g.text.encode('utf-8')).hexdigest(), 16),
+                res.append({'id': sha256(g.text.encode('utf-8')).hexdigest(),
                             'link': g.href, 'name': g.text, 'level': i})
         return res
 

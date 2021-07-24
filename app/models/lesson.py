@@ -42,12 +42,12 @@ class Lesson:
     def __eq__(self, other):
         if isinstance(other, Lesson):
             return (
-                    (self.subject.id == other.subject.id) and (self.lesson_number == other.lesson_number) and
-                    (self.is_odd_week == other.is_odd_week) and (self.weekday == other.weekday) and
-                    (self.start_time == other.start_time) and (self.end_time == other.end_time) and
-                    (self.lesson_type == other.lesson_type) and
-                    (self._get_teachers_hash() == other._get_teachers_hash()) and
-                    (self._get_classrooms_hash() == other._get_classrooms_hash())
+                (self.subject.id == other.subject.id) and (self.lesson_number == other.lesson_number) and
+                (self.is_odd_week == other.is_odd_week) and (self.weekday == other.weekday) and
+                (self.start_time == other.start_time) and (self.end_time == other.end_time) and
+                (self.lesson_type == other.lesson_type) and
+                (self._get_teachers_hash() == other._get_teachers_hash()) and
+                (self._get_classrooms_hash() == other._get_classrooms_hash())
             )
         else:
             return False

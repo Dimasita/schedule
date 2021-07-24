@@ -91,7 +91,7 @@ class Etu(University):
                     classrooms.append(classroom)
                     if s['url'] is not None:
                         tags.append({'text': '', 'link': s['url'], 'type': 'blue'})
-                    groups.append(self.groups[int(s['groupId'])])
+                    groups.append(self.groups[s['groupId']])
                     self._add_lesson(
                         Lesson(
                             self.subjects[int(s['lesson']['subject']['id'])],

@@ -23,7 +23,7 @@ class Bstu(University):
     @benchmark('set groups')
     def _set_groups(self) -> None:
         for g in self.full_data['Timetable']['Group']:
-            g_id = int(g['@IdGroup'])
+            g_id = g['@IdGroup']
             if g_id not in self.groups.keys():
                 self.groups[g_id] = Group(g_id, g['@Number'])
 
@@ -44,11 +44,11 @@ class Bstu(University):
                             if 'Lecturers' in lesson.keys() and lesson['Lecturers'] is not None:
                                 if type(lesson['Lecturers']['Lecturer']) is list:
                                     for teacher in lesson['Lecturers']['Lecturer']:
-                                        t_id = int(teacher['IdLecturer'])
+                                        t_id = teacher['IdLecturer']
                                         if t_id not in self.teachers.keys():
                                             self.teachers[t_id] = Teacher(t_id, teacher['ShortName'])
                                 else:
-                                    t_id = int(lesson['Lecturers']['Lecturer']['IdLecturer'])
+                                    t_id = lesson['Lecturers']['Lecturer']['IdLecturer']
                                     if t_id not in self.teachers.keys():
                                         self.teachers[t_id] = Teacher(
                                             t_id,
@@ -79,10 +79,10 @@ class Bstu(University):
                             if 'Lecturers' in lesson.keys() and lesson['Lecturers'] is not None:
                                 if type(lesson['Lecturers']['Lecturer']) is list:
                                     for teacher in lesson['Lecturers']['Lecturer']:
-                                        teachers.append(self.teachers[int(teacher['IdLecturer'])])
+                                        teachers.append(self.teachers[teacher['IdLecturer']])
                                 else:
-                                    teachers.append(self.teachers[int(lesson['Lecturers']['Lecturer']['IdLecturer'])])
-                            groups.append(self.groups[int(g['@IdGroup'])])
+                                    teachers.append(self.teachers[lesson['Lecturers']['Lecturer']['IdLecturer']])
+                            groups.append(self.groups[g['@IdGroup']])
                             lesson_type, subject_name = self._parse_subject(lesson['Discipline'])
                             subject = Subject(subject_name)
                             if subject.id not in self.subjects.keys():

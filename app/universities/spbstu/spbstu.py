@@ -97,7 +97,7 @@ class Spbstu(University):
             tags = list()
             if lesson['lesson']['groups'] is not None:
                 for group in lesson['lesson']['groups']:
-                    groups.append(self.groups[int(group['id'])])
+                    groups.append(self.groups[str(group['id'])])
             if lesson['lesson']['teachers'] is not None:
                 for teacher in lesson['lesson']['teachers']:
                     teachers.append(self.teachers[teacher['id']])
@@ -143,7 +143,7 @@ class Spbstu(University):
             self.schedule.extend(even)
 
     @staticmethod
-    async def _get_schedule_for_the_week(group_id: int, first_week_day: date) -> [{}]:
+    async def _get_schedule_for_the_week(group_id: str, first_week_day: date) -> [{}]:
         res = await get_json_async(
             LINKS['GET_SCHEDULE_BY_GROUP'] + str(group_id),
             method='GET',
