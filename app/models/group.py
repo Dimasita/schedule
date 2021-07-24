@@ -15,3 +15,12 @@ class Group:
         self.faculty = faculty
         self.level = level
         self.education_type = education_type
+
+    def __hash__(self):
+        return self.id
+
+    def __eq__(self, other):
+        if isinstance(other, Group):
+            return self.id == other.id
+        else:
+            return False

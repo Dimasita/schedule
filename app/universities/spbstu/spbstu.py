@@ -116,7 +116,7 @@ class Spbstu(University):
             start_time = datetime.strptime(lesson['lesson']['time_start'], '%H:%M').time()
             end_time = datetime.strptime(lesson['lesson']['time_start'], '%H:%M').time()
             lesson_number = self._calculate_lesson_number(start_time, end_time)
-            self.lessons.add(Lesson(
+            self._add_lesson(Lesson(
                 subject, groups, teachers, lesson_number, lesson['is_odd_week'],
                 humanize_weekday(lesson['weekday']), start_time, end_time,
                 lesson_type, classrooms, tags)

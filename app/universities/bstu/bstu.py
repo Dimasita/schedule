@@ -107,7 +107,7 @@ class Bstu(University):
                                 is_odd_week = True
                             start_time = self._get_start_time(lesson['Time'])
                             end_time = self._get_end_time(start_time)
-                            self.lessons.add(
+                            self._add_lesson(
                                 Lesson(
                                     subject,
                                     groups,

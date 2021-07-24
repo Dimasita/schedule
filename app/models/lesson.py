@@ -8,7 +8,7 @@ from models.group import Group
 class Lesson:
     subject: Subject
     teachers: list[Teacher]
-    groups: list[Group]
+    groups: set[Group]
     is_odd_week: bool
     weekday: str
     lesson_number: int
@@ -22,7 +22,7 @@ class Lesson:
                  is_odd_week: bool, weekday: str, start_time: time, end_time: time, lesson_type: str,
                  classrooms: list[{}], tags: list[{}]):
         self.teachers = teachers
-        self.groups = groups
+        self.groups = set(groups)
         self.subject = subject
         self.is_odd_week = is_odd_week
         self.weekday = weekday
@@ -34,9 +34,27 @@ class Lesson:
         self.classrooms = classrooms
 
     def __hash__(self):
-        return hash((self.subject.id, self.lesson_number, self.is_odd_week, self.weekday,
-                     self.start_time, self.end_time, self.lesson_type, self._hash_groups(),
-                     self._hash_groups(), self._hash_classrooms()))
+        return hash((
+            self.subject.id, self.lesson_number, self.is_odd_week, self.weekday, self.start_time,
+            self.end_time, self.lesson_type, self._get_teachers_hash(), self._get_classrooms_hash()
+        ))
+
+    def __eq__(self, other):
+        if isinstance(other, Lesson):
+            return (
+                    (self.subject.id == other.subject.id) and (self.lesson_number == other.lesson_number) and
+                    (self.is_odd_week == other.is_odd_week) and (self.weekday == other.weekday) and
+                    (self.start_time == other.start_time) and (self.end_time == other.end_time) and
+                    (self.lesson_type == other.lesson_type) and
+                    (self._get_teachers_hash() == other._get_teachers_hash()) and
+                    (self._get_classrooms_hash() == other._get_classrooms_hash())
+            )
+        else:
+            return False
+
+    def add_group(self, groups: {Group}) -> None:
+        for g in groups:
+            self.groups.add(g)
 
     def to_dict(self):
         d = self.__dict__
@@ -45,11 +63,11 @@ class Lesson:
         d['subject'] = self.subject.__dict__
         return d
 
-    def _hash_groups(self) -> hash:
-        return hash(tuple([obj.id for obj in self.groups]))
+    def _set_groups_hash(self) -> None:
+        self.groups_hash = hash(tuple([obj.id for obj in self.groups]))
 
-    def _hash_teachers(self) -> hash:
+    def _get_teachers_hash(self) -> hash:
         return hash(tuple([obj.id for obj in self.teachers]))
 
-    def _hash_classrooms(self) -> hash:
+    def _get_classrooms_hash(self) -> hash:
         return hash(tuple([obj['name'] for obj in self.classrooms]))

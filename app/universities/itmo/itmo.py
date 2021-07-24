@@ -97,7 +97,7 @@ class Itmo(University):
             groups.append(self.groups[s['group_id']])
             times = lesson.find('td', class_='time').find('span').text
             start_time, end_time = self._get_times(times)
-            self.lessons.add(Lesson(
+            self._add_lesson(Lesson(
                 subject, groups, teachers, self._calculate_lesson_number(start_time),
                 s['is_odd_week'], humanize_weekday(s['weekday']), start_time, end_time,
                 lesson_type, classrooms, tags)
@@ -129,6 +129,8 @@ class Itmo(University):
 
     def _parse_schedule_page_to_list(self, soup: BeautifulSoup, group_id: int) -> [{}]:
         res = list()
+        if group_id == 23260064379121035440413837092162989164688244427279882378615844646719144109190:
+            print(11)
         schedule = soup.find_all('table', class_='rasp_tabl')
         for s in schedule:
             if 'id' not in s.attrs.keys():

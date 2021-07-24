@@ -47,6 +47,15 @@ class University:
             'lessons': [obj.to_dict() for obj in self.lessons]
         }
 
+    def _add_lesson(self, lesson: Lesson) -> None:
+        if lesson not in self.lessons:
+            self.lessons.add(lesson)
+            return
+        for lsn in self.lessons:
+            if lsn == lesson:
+                lsn.add_group(lesson.groups)
+                break
+
     def _set_groups(self) -> None:
         raise NotImplementedError
 
